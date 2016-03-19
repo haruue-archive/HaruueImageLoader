@@ -27,9 +27,10 @@ public class ImageLoaderConfig {
     }
 
     public static ImageLoaderConfig start(Context context) {
-        getInstance().context = context;
-        getInstance().cachePath = context.getCacheDir().getPath() + "/imageCache";
-        return getInstance();
+        getInstance();
+        config.context = context;
+        config.cachePath = context.getCacheDir().getPath() + "/imageCache";
+        return config;
     }
 
     public ImageLoader build() {

@@ -1,9 +1,11 @@
 package cn.com.caoyue.imageloader;
 
 import android.accounts.NetworkErrorException;
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Handler;
+import android.provider.MediaStore;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -45,7 +47,7 @@ import javax.net.ssl.HttpsURLConnection;
     /*package*/
     static Thread runInNewThread(Runnable runnable) {
         Thread thread = new Thread(runnable);
-        thread.run();
+        thread.start();
         return thread;
     }
 
@@ -115,10 +117,14 @@ import javax.net.ssl.HttpsURLConnection;
         return null;
     }
 
-    private static Bitmap getBitmapFromInputStream(InputStream is)
+    /*package*/ static Bitmap getBitmapFromInputStream(InputStream is)
             throws IOException {
         Bitmap bitmap = BitmapFactory.decodeStream(is);
         is.close();
         return bitmap;
+    }
+
+    /*package*/ static Bitmap getBitmapFromFile(String path) {
+        return BitmapFactory.decodeFile(path);
     }
 }

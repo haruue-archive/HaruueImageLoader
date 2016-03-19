@@ -12,7 +12,7 @@ public class ImageLoader {
 
     protected static ImageLoader imageLoader;
 
-    protected ImageLoaderConfig config;
+    /*package*/ ImageLoaderConfig config;
 
     protected ImageLoader() {
 
@@ -39,7 +39,8 @@ public class ImageLoader {
     }
 
     public synchronized void loadImage(@NonNull String url, @NonNull ImageView view, @Nullable ImageConfig config, @Nullable ImageLoaderListener listener) {
-        new ImageLoaderCore(url, view, config, listener, this.config).load();
+        checkHasConfig();
+        new ImageLoaderCore(url, view, config, listener).load();
     }
 
     public synchronized void loadImage(@NonNull String url, @NonNull ImageView view, @Nullable ImageLoaderListener listener) {

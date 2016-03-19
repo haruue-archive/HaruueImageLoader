@@ -16,7 +16,7 @@ public class ImageCache {
     public static Map<String, Thread> threadMap = new HashMap<String, Thread>(0);
     public static LruCache<String, Bitmap> bitmapCache = new LruCache<>((int) Runtime.getRuntime().totalMemory()/8);
 
-    public static Uri getInternalStorageCache(String url, String cachePath) throws IOException {
+    public static String getInternalStorageCache(String url, String cachePath) throws IOException {
         String urlSha1 = Utils.SHA1(url);
         File cacheFolder = new File(cachePath);
         if (!cacheFolder.exists()) {
@@ -25,15 +25,13 @@ public class ImageCache {
         if (!cacheFolder.isDirectory()) {
             throw new IOException("Can\'t access " + cachePath + " for it may be not a directory");
         }
-        Map<String, String> fileList = new HashMap<String, String>(0);
         File[] files = cacheFolder.listFiles();
         for (File i: files) {
             if (!i.isDirectory()) {
-                fileList.put(i.getAbsolutePath().substring(i.getAbsolutePath().lastIndexOf("/") + 1), i.getAbsolutePath());
+                if (i.getAbsolutePath().substring(i.getAbsolutePath().lastIndexOf("/") + 1).equals(urlSha1)) {
+                    return i.getAbsolutePath();
+                }
             }
-        }
-        if (fileList.containsKey(urlSha1)) {
-            return Uri.parse("file://" + fileList.get(urlSha1));
         }
         return null;
     }

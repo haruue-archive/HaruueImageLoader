@@ -4,11 +4,13 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.widget.ImageView;
 
 import java.io.IOException;
+import java.util.concurrent.TimeoutException;
 
 /*package*/ class ImageLoaderCore {
 
@@ -19,12 +21,12 @@ import java.io.IOException;
     ImageLoaderConfig defaultConfig;
     ImageLoaderListener listener;
 
-    /*package*/ ImageLoaderCore(@NonNull String url, @NonNull ImageView view, @Nullable ImageConfig imageConfig, @Nullable ImageLoaderListener listener, @NonNull ImageLoaderConfig defaultConfig) {
-        handler = new Handler(defaultConfig.context.getMainLooper());
+    /*package*/ ImageLoaderCore(@NonNull String url, @NonNull ImageView view, @Nullable ImageConfig imageConfig, @Nullable ImageLoaderListener listener) {
+        handler = new Handler(Looper.getMainLooper());
         this.url = url;
         this.view = view;
         this.imageConfig = imageConfig;
-        this.defaultConfig = defaultConfig;
+        this.defaultConfig = ImageLoader.getInstance().config;
         this.listener = listener;
     }
 
@@ -33,48 +35,62 @@ import java.io.IOException;
         Utils.runInNewThread(new Runnable() {
             @Override
             public void run() {
-                Looper.prepare();
                 checkConfig();
                 onLoading();
-                if (ImageCache.bitmapCache.get(url) != null) {
-                    onGetBitmap(ImageCache.bitmapCache.get(url));
-                    return;
-                }
                 if (imageConfig.isCache == 1) {
-                    try {
-                        Uri uri = ImageCache.getInternalStorageCache(url, defaultConfig.cachePath);
-                        if (uri != null) {
-                            onGetImageUri(uri);
-                            return;
+                    Bitmap bitmap = ImageCache.bitmapCache.get(url);
+                    if (bitmap != null) {
+                        onGetBitmap(bitmap);
+                        return;
+                    } else {
+                        try {
+                            String path = ImageCache.getInternalStorageCache(url, defaultConfig.cachePath);
+                            if (path != null) {
+                                bitmap = Utils.getBitmapFromFile(path);
+                                onGetBitmap(bitmap);
+                                return;
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
                         }
-                    } catch (IOException e) {
-                        e.printStackTrace();
                     }
                 }
                 try {
-                    onGetBitmap(ImageCache.getFromNetwork(url));
+                    Bitmap bitmap = ImageCache.getFromNetwork(url);
+                    if (bitmap != null) {
+                        onGetBitmap(bitmap);
+                    } else {
+                        onFailure(new TimeoutException("Network time out"));
+                    }
                 } catch (Exception e) {
                     onFailure(e);
                 }
-
-
             }
         });
-
     }
 
     protected void checkConfig() {
-        imageConfig.drawableOnLoading = (imageConfig.drawableOnLoading == -1) ? defaultConfig.defaultDrawableOnLoading : imageConfig.drawableOnLoading;
-        imageConfig.drawableOnFailure = (imageConfig.drawableOnFailure == -1) ? defaultConfig.defaultDrawableOnFailure : imageConfig.drawableOnFailure;
-        if (imageConfig.isKeepRatio == 1) {
-            if (imageConfig.height != -1 && imageConfig.width != -1) {
-                throw new IllegalArgumentException("You can\'t set both width and height if you want to keep ratio");
+        if (imageConfig == null) {
+            imageConfig = new ImageConfig();
+            imageConfig.drawableOnLoading = defaultConfig.defaultDrawableOnLoading;
+            imageConfig.drawableOnFailure = defaultConfig.defaultDrawableOnFailure;
+            imageConfig.isCache = 0;
+            imageConfig.isKeepRatio = 0;
+            imageConfig.height = -1;
+            imageConfig.width = -1;
+        } else {
+            imageConfig.drawableOnLoading = (imageConfig.drawableOnLoading == -1) ? defaultConfig.defaultDrawableOnLoading : imageConfig.drawableOnLoading;
+            imageConfig.drawableOnFailure = (imageConfig.drawableOnFailure == -1) ? defaultConfig.defaultDrawableOnFailure : imageConfig.drawableOnFailure;
+            if (imageConfig.isKeepRatio == 1) {
+                if (imageConfig.height != -1 && imageConfig.width != -1) {
+                    throw new IllegalArgumentException("You can\'t set both width and height if you want to keep ratio");
+                }
+            } else if (imageConfig.isKeepRatio == 0) {
+                imageConfig.isKeepRatio = 1;
             }
-        } else if (imageConfig.isKeepRatio == 0) {
-            imageConfig.isKeepRatio = 1;
-        }
-        if (imageConfig.isCache == 0) {
-            imageConfig.isCache = defaultConfig.isCache ? 1 : -1;
+            if (imageConfig.isCache == 0) {
+                imageConfig.isCache = defaultConfig.isCache ? 1 : -1;
+            }
         }
     }
 
@@ -82,18 +98,11 @@ import java.io.IOException;
         Utils.runInUIThread(handler, new Runnable() {
             @Override
             public void run() {
+                view.destroyDrawingCache();
                 view.setImageBitmap(bitmap);
-                listener.onImageLoadSuccess();
-            }
-        });
-    }
-
-    /*package*/ void onGetImageUri(final Uri uri) {
-        Utils.runInUIThread(handler, new Runnable() {
-            @Override
-            public void run() {
-                view.setImageURI(uri);
-                listener.onImageLoadSuccess();
+                if (listener != null) {
+                    listener.onImageLoadSuccess();
+                }
             }
         });
     }
@@ -116,8 +125,11 @@ import java.io.IOException;
                 if (imageConfig.drawableOnFailure != -1) {
                     view.setImageResource(imageConfig.drawableOnFailure);
                 }
-                listener.onImageLoadFailure(t);
+                if (listener != null) {
+                    listener.onImageLoadFailure(t);
+                }
             }
         });
     }
+
 }
