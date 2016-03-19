@@ -1,27 +1,26 @@
 package cn.com.caoyue.imageloader;
 
 import android.graphics.Bitmap;
-import android.media.Image;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.util.Log;
-import android.util.LruCache;
 import android.widget.ImageView;
 
 import java.io.IOException;
 
+/**
+ * ImageLoader 内核，实际加载行为的执行类
+ */
 /*package*/ class ImageLoaderCore {
 
+    Thread loadingThread;
     Handler handler;
     String url;
     ImageView view;
     ImageConfig imageConfig;
     ImageLoaderConfig defaultConfig;
     ImageLoaderListener listener;
-    int needWidth;
-    int needHeight;
 
     /*package*/ ImageLoaderCore(@NonNull String url, @NonNull ImageView view, @Nullable ImageConfig imageConfig, @Nullable ImageLoaderListener listener) {
         handler = new Handler(Looper.getMainLooper());
@@ -37,12 +36,12 @@ import java.io.IOException;
         view.post(new Runnable() {
             @Override
             public void run() {
-                Utils.runInNewThread(new Runnable() {
+                loadingThread = Utils.runInNewThread(new Runnable() {
                     @Override
                     public void run() {
                         checkConfig();
                         onLoading();
-                        if (imageConfig.isCache >= 0) {
+                        if (imageConfig.isRefresh >= 0) {
                             Bitmap bitmap = checkBitmap(ImageCache.bitmapCache.get(url), false);
                             if (bitmap != null) {
                                 onGetBitmap(bitmap);
@@ -54,8 +53,11 @@ import java.io.IOException;
                                         bitmap = checkBitmap(Utils.getBitmapFromFile(path), false);
                                         if (bitmap != null) {
                                             onGetBitmap(bitmap);
-                                            ImageCache.bitmapCache.remove(url);
-                                            ImageCache.bitmapCache.put(url, bitmap);
+                                            if (imageConfig.isKeepRatio >= 0 && imageConfig.isFillView > 0) {
+                                                //不存储形变图
+                                                ImageCache.bitmapCache.remove(url);
+                                                ImageCache.bitmapCache.put(url, bitmap);
+                                            }
                                             return;
                                         }
                                     }
@@ -66,10 +68,13 @@ import java.io.IOException;
                         }
                         try {
                             Bitmap bitmap = checkBitmap(ImageCache.getFromNetwork(url), true);
+                            if (imageConfig.isKeepRatio >= 0 && imageConfig.isFillView > 0) {
+                                //不存储形变图
+                                ImageCache.bitmapCache.remove(url);
+                                ImageCache.bitmapCache.put(url, bitmap);
+                                ImageCache.putInternalStorageCache(url, bitmap, defaultConfig.cachePath);
+                            }
                             onGetBitmap(bitmap);
-                            ImageCache.bitmapCache.remove(url);
-                            ImageCache.bitmapCache.put(url, bitmap);
-                            ImageCache.putInternalStorageCache(url, bitmap, defaultConfig.cachePath);
                         } catch (Exception e) {
                             onFailure(e);
                         }
@@ -84,23 +89,28 @@ import java.io.IOException;
             imageConfig = new ImageConfig();
             imageConfig.drawableOnLoading = defaultConfig.defaultDrawableOnLoading;
             imageConfig.drawableOnFailure = defaultConfig.defaultDrawableOnFailure;
+            imageConfig.drawableOnCancel = defaultConfig.defaultDrawableOnCancel;
             imageConfig.isCache = defaultConfig.isCache ? 1 : -1;
             imageConfig.isKeepRatio = 0;
+            imageConfig.isFillView = defaultConfig.isFillView ? 1 : -1;
             imageConfig.height = -1;
             imageConfig.width = -1;
-        } else {
-            imageConfig.drawableOnLoading = (imageConfig.drawableOnLoading == -1) ? defaultConfig.defaultDrawableOnLoading : imageConfig.drawableOnLoading;
-            imageConfig.drawableOnFailure = (imageConfig.drawableOnFailure == -1) ? defaultConfig.defaultDrawableOnFailure : imageConfig.drawableOnFailure;
-            if (imageConfig.isKeepRatio == 1) {
-                if (imageConfig.height != -1 && imageConfig.width != -1) {
-                    throw new IllegalArgumentException("You can\'t set both width and height if you want to keep ratio");
-                }
-            } else if (imageConfig.isKeepRatio == 0) {
-                imageConfig.isKeepRatio = 1;
+        }
+        imageConfig.drawableOnLoading = (imageConfig.drawableOnLoading == -1) ? defaultConfig.defaultDrawableOnLoading : imageConfig.drawableOnLoading;
+        imageConfig.drawableOnFailure = (imageConfig.drawableOnFailure == -1) ? defaultConfig.defaultDrawableOnFailure : imageConfig.drawableOnFailure;
+        imageConfig.drawableOnCancel = (imageConfig.drawableOnCancel == -1) ? defaultConfig.defaultDrawableOnCancel : imageConfig.drawableOnCancel;
+        if (imageConfig.isKeepRatio == 1) {
+            if (imageConfig.height != -1 && imageConfig.width != -1) {
+                throw new IllegalArgumentException("You can\'t set both width and height if you want to keep ratio");
             }
-            if (imageConfig.isCache == 0) {
-                imageConfig.isCache = defaultConfig.isCache ? 1 : -1;
-            }
+        } else if (imageConfig.isKeepRatio == 0) {
+            imageConfig.isKeepRatio = 1;
+        }
+        if (imageConfig.isCache == 0) {
+            imageConfig.isCache = defaultConfig.isCache ? 1 : -1;
+        }
+        if (imageConfig.isFillView == 0) {
+            imageConfig.isFillView = defaultConfig.isFillView ? 1 : -1;
         }
     }
 
@@ -111,10 +121,11 @@ import java.io.IOException;
                 view.destroyDrawingCache();
                 view.setImageBitmap(bitmap);
                 if (listener != null) {
-                    listener.onImageLoadSuccess();
+                    listener.onImageLoadSuccess(url);
                 }
             }
         });
+        ImageLoader.getInstance().loadingImage.remove(url);
     }
 
     /*package*/ void onLoading() {
@@ -136,40 +147,77 @@ import java.io.IOException;
                     view.setImageResource(imageConfig.drawableOnFailure);
                 }
                 if (listener != null) {
-                    listener.onImageLoadFailure(t);
+                    listener.onImageLoadFailure(url, t);
                 }
             }
         });
+        ImageLoader.getInstance().loadingImage.remove(url);
+    }
+
+    /*package*/ void onLoadCancel() {
+        loadingThread.interrupt();
+        Utils.runInUIThread(handler, new Runnable() {
+            @Override
+            public void run() {
+                if (listener != null) {
+                    listener.onImageLoadCancel(url);
+                }
+            }
+        });
+        ImageLoader.getInstance().loadingImage.remove(url);
     }
 
     protected Bitmap checkBitmap(Bitmap bitmap, boolean isFromNetwork) {
         if (bitmap == null) {
             return null;
         }
-        needWidth = imageConfig.width;
-        needHeight = imageConfig.height;
-        if (imageConfig.isKeepRatio >= 0) {
-            double widthRatio = (double) view.getWidth() / (double) bitmap.getWidth();
-            double heightRatio = (double) view.getHeight() / (double) bitmap.getHeight();
-            if (needHeight == -1 && needWidth == -1) {
-                if (widthRatio > heightRatio) {
-                    needWidth = (int) (bitmap.getWidth() * heightRatio);
-                    needHeight = view.getHeight();
+        if (imageConfig.isKeepRatio < 0) {
+            int width = (imageConfig.width == -1) ? view.getWidth() : imageConfig.width;
+            int height = (imageConfig.height == -1) ? view.getHeight() : imageConfig.height;
+            bitmap = Utils.zoomImg(bitmap, width, height);
+        } else {
+            if (imageConfig.width == -1 && imageConfig.height == -1) {
+                int width, height;
+                double widthRatio = (double) bitmap.getWidth() / (double) view.getWidth();
+                double heightRatio = (double) bitmap.getHeight() / (double) view.getHeight();
+                if (Math.abs(widthRatio - 1) > Math.abs(heightRatio -1)) {
+                    width = (int) (bitmap.getWidth() / widthRatio);
+                    height = (int) ((bitmap).getWidth() / widthRatio);
                 } else {
-                    needWidth = view.getWidth();
-                    needHeight = (int) (bitmap.getHeight() * widthRatio);
+                    width = (int) (bitmap.getWidth() / heightRatio);
+                    height = (int) ((bitmap).getWidth() / heightRatio);
                 }
-            } else if (needHeight == -1) {
-                needHeight = (int) (bitmap.getHeight() * widthRatio);
-            } else if (needWidth == -1) {
-                needWidth = (int) (bitmap.getWidth() * heightRatio);
+                bitmap = Utils.zoomImg(bitmap, width, height);
+            } else if (imageConfig.width == -1) {
+                int width, height;
+                double heightRatio = (double) bitmap.getHeight() / (double) imageConfig.height;
+                width = (int) (bitmap.getWidth() / heightRatio);
+                height = (int) (bitmap.getHeight() / heightRatio);
+                bitmap = Utils.zoomImg(bitmap, width, height);
+            } else if (imageConfig.height == -1) {
+                int width, height;
+                double widthRatio = (double) bitmap.getWidth() / (double) imageConfig.width;
+                width = (int) (bitmap.getWidth() / widthRatio);
+                height = (int) (bitmap.getHeight() / widthRatio);
+                bitmap = Utils.zoomImg(bitmap, width, height);
             }
         }
-        if (!isFromNetwork && (needWidth > bitmap.getWidth() || needHeight > bitmap.getHeight())) {
-            return null;
-        } else {
-            return Utils.zoomImg(bitmap, needWidth, needHeight);
+        if (imageConfig.isFillView > 0) {
+            if (bitmap.getHeight() < view.getHeight() || bitmap.getWidth() < view.getWidth()) {
+                int width, height;
+                double widthRatio = (double) bitmap.getWidth() / (double) view.getWidth();
+                double heightRatio = (double) bitmap.getHeight() / (double) view.getHeight();
+                if (widthRatio >= heightRatio) {
+                    width = (int) (bitmap.getWidth() / heightRatio);
+                    height = (int) (bitmap.getHeight() / heightRatio);
+                } else {
+                    width = (int) (bitmap.getWidth() / widthRatio);
+                    height = (int) (bitmap.getHeight() / widthRatio);
+                }
+                bitmap = Utils.zoomImg(bitmap, width, height);
+            }
+            bitmap = Bitmap.createBitmap(bitmap, 0, 0, view.getWidth(), view.getHeight(), null, false);
         }
+        return bitmap;
     }
-
 }

@@ -2,19 +2,17 @@ package cn.com.caoyue.imageloader;
 
 import android.accounts.NetworkErrorException;
 import android.graphics.Bitmap;
-import android.net.Uri;
 import android.util.LruCache;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.util.HashMap;
-import java.util.Map;
 
-public class ImageCache {
-    public static Map<String, Thread> threadMap = new HashMap<String, Thread>(0);
+/**
+ * 缓存实现
+ */
+/*package*/ class ImageCache {
     public static LruCache<String, Bitmap> bitmapCache = new LruCache<>((int) Runtime.getRuntime().totalMemory()/8);
 
     public static String getInternalStorageCache(String url, String cachePath) throws IOException {
