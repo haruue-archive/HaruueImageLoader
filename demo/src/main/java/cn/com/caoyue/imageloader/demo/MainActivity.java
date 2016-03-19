@@ -36,6 +36,9 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onImageLoadFailure(Throwable t) {
             Log.e("ImageLoader", t.getMessage());
+            Log.e("ImageLoader", t.getLocalizedMessage());
+            Log.e("ImageLoader", t.getSuppressed().toString());
+
             t.printStackTrace();
             Toast.makeText(getApplicationContext(), "Load failure", Toast.LENGTH_LONG).show();
         }

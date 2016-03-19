@@ -1,5 +1,6 @@
 package cn.com.caoyue.imageloader;
 
+import android.accounts.NetworkErrorException;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.util.LruCache;
@@ -46,13 +47,16 @@ public class ImageCache {
             throw new IOException("Can\'t access " + cachePath + " for it may be not a directory");
         }
         File saveFile = new File(cachePath + "/" + urlSha1);
+        if (saveFile.exists()) {
+            saveFile.delete();
+        }
         BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(saveFile));
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, bos);
+        bitmap.compress(Bitmap.CompressFormat.WEBP, 80, bos);
         bos.flush();
         bos.close();
     }
 
-    public static Bitmap getFromNetwork(String url) {
+    public static Bitmap getFromNetwork(String url) throws NetworkErrorException {
         return Utils.get(url);
     }
 }

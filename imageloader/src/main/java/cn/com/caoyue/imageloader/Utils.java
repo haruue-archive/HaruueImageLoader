@@ -4,10 +4,13 @@ import android.accounts.NetworkErrorException;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.graphics.drawable.BitmapDrawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Handler;
-import android.provider.MediaStore;
+import android.widget.ImageView;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -56,7 +59,16 @@ import javax.net.ssl.HttpsURLConnection;
         handler.post(runnable);
     }
 
-    public static Bitmap get(String url) {
+    public static Bitmap get(String url) throws NetworkErrorException {
+        try {
+            if (!isNetworkConnected(ImageLoader.getInstance().config.context)) {
+                throw new NetworkErrorException("Can't connect network");
+            }
+        } catch (Exception e) {
+            if (e.getClass().equals(NetworkErrorException.class)) {
+                throw e;
+            }
+        }
         if (url.substring(0, url.indexOf(":")).toLowerCase().equals("http")) {
             HttpURLConnection conn = null;
             try {
@@ -127,4 +139,32 @@ import javax.net.ssl.HttpsURLConnection;
     /*package*/ static Bitmap getBitmapFromFile(String path) {
         return BitmapFactory.decodeFile(path);
     }
+
+    /*package*/ static boolean isNetworkConnected(Context context) {
+        if (context != null) {
+            ConnectivityManager mConnectivityManager = (ConnectivityManager) context
+                    .getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo mNetworkInfo = mConnectivityManager.getActiveNetworkInfo();
+            if (mNetworkInfo != null) {
+                return mNetworkInfo.isAvailable();
+            }
+        }
+        return false;
+    }
+
+    /*package*/ static Bitmap zoomImg(Bitmap bm, int newWidth ,int newHeight){
+        // 获得图片的宽高
+        int width = bm.getWidth();
+        int height = bm.getHeight();
+        // 计算缩放比例
+        float scaleWidth = ((float) newWidth) / width;
+        float scaleHeight = ((float) newHeight) / height;
+        // 取得想要缩放的matrix参数
+        Matrix matrix = new Matrix();
+        matrix.postScale(scaleWidth, scaleHeight);
+        // 得到新的图片
+        Bitmap newbm = Bitmap.createBitmap(bm, 0, 0, width, height, matrix, true);
+        return newbm;
+    }
+
 }
