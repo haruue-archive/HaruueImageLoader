@@ -23,9 +23,9 @@ dependencies {
 public void onCreate() {
     super.onCreate();
     ImageLoaderConfig.start(this)
-            .setDefaultDrawableOnLoading(R.drawable.ic_hourglass_empty_black_24dp)
-            .setDefaultDrawableOnFailure(R.drawable.ic_broken_image_black_24dp)
-            .build();
+            .setDefaultDrawableOnLoading(R.drawable.ic_hourglass_empty_black_24dp)       //指定加载时显示的 Drawable
+            .setDefaultDrawableOnFailure(R.drawable.ic_broken_image_black_24dp)     //指定加载失败时显示的 Drawable
+            .build();   
 }
 
 ```    
@@ -51,7 +51,7 @@ ImageLoader.getInstance().loadImage(url, this.v, new ImageConfig().setRefresh().
 提供 [`ImageLoaderListener`](http://haruue.github.io/HaruueImageLoader/cn/com/caoyue/imageloader/ImageLoaderListener.html) 接口，可以在图片加载完成、出错、取消时回调    
 
 ``` Java
-ImageLoader.getInstance().loadImage(url, image, new ImageLoaderListener() {
+ImageLoader.getInstance().loadImage(url, imageView, new ImageLoaderListener() {
     @Override
     public void onImageLoadSuccess(String url) {
             
