@@ -27,9 +27,15 @@ android {
     }
 }
 
+repositories {
+    maven {
+        url 'https://dl.bintray.com/haruue/maven/'
+    }
+}
+
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:23.2.1'
-    compile project(':imageloader')
+    compile 'cn.com.caoyue.util:imageloader:0.9.8-experiment'
 }

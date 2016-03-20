@@ -1,12 +1,9 @@
 package cn.com.caoyue.imageloader.demo;
 
-import android.location.GpsStatus;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.SimpleAdapter;
 import android.widget.Toast;
 
 import cn.com.caoyue.imageloader.ImageConfig;

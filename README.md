@@ -2,13 +2,19 @@
 简易的图片加载器 - 实验版本    
 使用多线程加载图片，支持内存缓存和本地缓存。    
 
-<!--
 ## Download
 ``` Gradle
-compile 'cn.com.caoyue.util:imageloader:0.9.8-experiment'
+repositories {
+    maven {
+        url 'https://dl.bintray.com/haruue/maven/'
+    }
+}
+
+dependencies {
+    compile 'cn.com.caoyue.util:imageloader:0.9.8-experiment'
+}
 
 ```
--->
 
 ## Usage
 在 `Application` 子类的 `onCreate()` 方法中初始化    
