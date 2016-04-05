@@ -11,7 +11,7 @@ repositories {
 }
 
 dependencies {
-    compile 'cn.com.caoyue.util:imageloader:0.9.8-experiment'
+    compile 'cn.com.caoyue.util:imageloader:0.9.9-experiment'
 }
 
 ```

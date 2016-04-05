@@ -41,7 +41,7 @@ import java.io.IOException;
                     public void run() {
                         checkConfig();
                         onLoading();
-                        if (imageConfig.isRefresh >= 0) {
+                        if (imageConfig.isRefresh <= 0) {
                             Bitmap bitmap = checkBitmap(ImageCache.bitmapCache.get(url), false);
                             if (bitmap != null) {
                                 onGetBitmap(bitmap);
@@ -53,7 +53,7 @@ import java.io.IOException;
                                         bitmap = checkBitmap(Utils.getBitmapFromFile(path), false);
                                         if (bitmap != null) {
                                             onGetBitmap(bitmap);
-                                            if (imageConfig.isKeepRatio >= 0 && imageConfig.isFillView > 0) {
+                                            if (imageConfig.isKeepRatio >= 0) {
                                                 //不存储形变图
                                                 ImageCache.bitmapCache.remove(url);
                                                 ImageCache.bitmapCache.put(url, bitmap);
@@ -68,7 +68,7 @@ import java.io.IOException;
                         }
                         try {
                             Bitmap bitmap = checkBitmap(ImageCache.getFromNetwork(url), true);
-                            if (imageConfig.isKeepRatio >= 0 && imageConfig.isFillView > 0) {
+                            if (imageConfig.isKeepRatio >= 0) {
                                 //不存储形变图
                                 ImageCache.bitmapCache.remove(url);
                                 ImageCache.bitmapCache.put(url, bitmap);

@@ -8,7 +8,7 @@ android {
         minSdkVersion 14
         targetSdkVersion 23
         versionCode 2
-        versionName "0.9.8-experiment"
+        versionName "0.9.9-experiment"
     }
     buildTypes {
         release {
@@ -32,9 +32,9 @@ ext {
     artifact = 'imageloader'//JCenter的ArtifactId
 
     siteUrl = 'https://github.com/haruue/HaruueImageLoader'
-    gitUrl = 'https://github.com/Jude95/HaruueImageLoader'
+    gitUrl = 'https://github.com/haruue/HaruueImageLoader'
 
-    libraryVersion = '0.9.8-experiment'//版本号
+    libraryVersion = '0.9.9-experiment'//版本号
     libraryName = 'HaruueImageLoader'//项目名字，没什么用
     libraryDescription = 'A simple tool to load a image from network for android'//项目描述，没什么用
 
@@ -49,5 +49,5 @@ ext {
     licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
     allLicenses = ["Apache-2.0"]
 }
-apply from:'https://raw.githubusercontent.com/Jude95/JCenter/master/install.gradle'
-apply from:'https://raw.githubusercontent.com/Jude95/JCenter/master/bintray.gradle'
+apply from:'https://cdn.rawgit.com/Jude95/JCenter/master/install.gradle'
+apply from:'https://cdn.rawgit.com/Jude95/JCenter/master/bintray.gradle'
